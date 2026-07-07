@@ -69,7 +69,7 @@ function App() {
         <h2 className="text-5xl font-bold mb-4">Fresh Baked Daily</h2>
         <p className="text-xl max-w-md mx-auto">Order online • Choose your pickup time • Straight from the oven to you</p>
       </div>
-
+      
       {/* Products Grid */}
       <div className="max-w-6xl mx-auto px-6 py-12">
         <h2 className="text-3xl font-semibold text-amber-900 mb-10 text-center">Our Delicious Cookies</h2>
@@ -84,9 +84,9 @@ function App() {
                 className="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300"
               >
                 <img 
-                  src={product.image_url || "/photos/IMG_6449.jpeg"} 
+                  src={product.image_url || "photos/blog-thumb-chewy-chocolate-chips-cookies.jpg"} 
                   alt={product.name}
-                  className="w-full h-24 object-cover"
+                  className="w-full h-64 object-contain bg-gray-100"
                 />
                 <div className="p-6">
                   <h3 className="text-2xl font-semibold text-amber-900 mb-2">{product.name}</h3>
