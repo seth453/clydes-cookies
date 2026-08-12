@@ -1,8 +1,13 @@
-import Stripe from "npm:stripe@22.3.2";
+import "@supabase/functions-js/edge-runtime.d.ts";
+import { withSupabase } from "@supabase/server";
+import Stripe from "stripe";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
-  apiVersion: "2025-02-24.acacia",
-});
+const stripe = new Stripe(
+  Deno.env.get("STRIPE_SECRET_KEY")!,
+  {
+    apiVersion: "2025-06-30.basil",
+  }
+);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,65 +15,95 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      ...corsHeaders,
-    },
-  });
-}
-
 export default {
-  async fetch(req: Request) {
-    if (req.method === "OPTIONS") {
-      return new Response("ok", { headers: corsHeaders });
-    }
-
-    if (req.method !== "POST") {
-      return jsonResponse({ error: "Method not allowed" }, 405);
-    }
-
-    try {
-      const body = await req.json();
-      const { cart, customerInfo, successUrl, cancelUrl } = body;
-
-      if (!Array.isArray(cart) || cart.length === 0) {
-        return jsonResponse({ error: "Cart is empty" }, 400);
+  fetch: withSupabase(
+    { auth: "none" },
+    async (req, ctx) => {
+      if (req.method === "OPTIONS") {
+        return new Response("ok", {
+          headers: corsHeaders,
+        });
       }
 
-      const origin = req.headers.get("origin") ?? "http://localhost:5173";
-      const siteUrl = Deno.env.get("SITE_URL") ?? origin;
+      try {
+        const { cart, customerInfo } = await req.json();
 
-      const lineItems = cart.map((item: any) => ({
-        price_data: {
-          currency: "usd",
-          product_data: {
-            name: item.name,
+        if (!cart || cart.length === 0) {
+          throw new Error("Cart is empty.");
+        }
+
+        const line_items = [];
+
+        for (const item of cart) {
+          const { data: product, error } = await ctx.supabase
+            .from("products")
+            .select("id, name, price")
+            .eq("id", item.id)
+            .single();
+
+          if (error || !product) {
+            throw new Error(`Product not found: ${item.id}`);
+          }
+
+          line_items.push({
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: product.name,
+              },
+              unit_amount: Math.round(Number(product.price) * 100),
+            },
+            quantity: item.quantity,
+          });
+        }
+
+        const session = await stripe.checkout.sessions.create({
+          mode: "payment",
+          payment_method_types: ["card"],
+          line_items,
+
+          metadata: {
+            customer_name: customerInfo?.name || "",
+            customer_email: customerInfo?.email || "",
+            pickup_time: customerInfo?.pickupTime || "",
+            cart: JSON.stringify(
+              cart.map((item) => ({
+                id: item.id,
+                quantity: item.quantity,
+              }))
+            ),
           },
-          unit_amount: Math.round(Number(item.price) * 100),
-        },
-        quantity: item.quantity,
-      }));
 
-      const session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        line_items: lineItems,
-        success_url: successUrl ?? `${siteUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl ?? `${siteUrl}/`,
-        customer_email: customerInfo?.email,
-        metadata: {
-          customer_name: customerInfo?.name ?? "",
-          pickup_time: customerInfo?.pickupTime ?? "",
-        },
-      });
+          success_url: "https://clydescookies.com",
+          cancel_url: "https://clydescookies.com",
+        });
 
-      return jsonResponse({ url: session.url });
-    } catch (error) {
-      console.error("Stripe checkout error:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return jsonResponse({ error: message }, 500);
+        return new Response(
+          JSON.stringify({ url: session.url }),
+          {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } catch (err) {
+        console.error("Checkout error:", err);
+
+        return new Response(
+          JSON.stringify({
+            error: err instanceof Error ? err.message : "Unknown error",
+          }),
+          {
+            status: 500,
+            headers: {
+              ...corsHeaders,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
     }
-  },
+  ),
 };

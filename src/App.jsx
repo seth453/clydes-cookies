@@ -11,11 +11,22 @@ function App() {
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
-  const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', pickupTime: '' })
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    email: '',
+    pickupTime: '',
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart')
-    if (savedCart) setCart(JSON.parse(savedCart))
+    const saved = localStorage.getItem('cart')
+    if (saved) {
+      try {
+        setCart(JSON.parse(saved))
+      } catch {
+        localStorage.removeItem('cart')
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -25,7 +36,10 @@ function App() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const { data, error } = await supabase.from('products').select('*').order('name')
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('name')
         if (error) throw error
         setProducts(data || [])
       } catch (err) {
@@ -35,12 +49,23 @@ function App() {
         setLoading(false)
       }
     }
-
     fetchProducts()
   }, [])
 
+  useEffect(() => {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('payment') === 'success') {
+    alert('Payment successful! We’ll see you at pickup.')
+    //clear the query so it doesn’t alert again on refresh
+    window.history.replaceState({}, '', window.location.pathname)
+  }
+}, [])
+
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const cartTotal = cart.reduce(
+    (sum, item) => sum + Number(item.price) * item.quantity,
+    0
+  )
 
   const addToCart = (product) => {
     setCart((prev) => {
@@ -59,14 +84,13 @@ function App() {
   const updateQuantity = (id, qty) => {
     if (qty < 1) return
     setCart((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: qty } : item
-      )
+      prev.map((item) => (item.id === id ? { ...item, quantity: qty } : item))
     )
   }
 
-  const removeFromCart = (id) =>
+  const removeFromCart = (id) => {
     setCart((prev) => prev.filter((item) => item.id !== id))
+  }
 
   const handleCheckout = () => {
     if (cart.length === 0) return
@@ -83,150 +107,142 @@ function App() {
       alert('Please enter a valid email address.')
       return
     }
-
-    const { data, error: orderError } = await supabase
-      .from('orders')
-      .insert([
-        {
-          customer_name: customerInfo.name,
-          customer_email: customerInfo.email,
-          pickup_time: customerInfo.pickupTime,
-          total: cartTotal,
-        },
-      ])
-      .select('id, customer_name, customer_email, pickup_time, total, created_at')
-
-    if (orderError) {
-      console.error('Order insert error:', orderError)
-
-      const message = orderError.message?.includes('row-level security')
-        ? 'The database is blocking new orders because the table policies are not set up yet. Please run the SQL in src/orders.sql in Supabase.'
-        : `Couldn't place order: ${orderError.message}`
-
-      alert(message)
+    if (cart.length === 0) {
+      alert('Your cart is empty.')
       return
     }
 
-    const order = Array.isArray(data) ? data[0] : data
-    if (!order?.id) {
-      const fallbackOrderId = crypto.randomUUID()
-      const orderItems = cart.map((item) => ({
-        order_id: fallbackOrderId,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price,
-      }))
+    // Make sure every item has a valid price + quantity before sending
+    const cleanCart = cart.map((item) => {
+      const price = Number(item.price)
+      const quantity = parseInt(item.quantity, 10)
 
-      const { error: itemError } = await supabase.from('order_items').insert(orderItems)
-
-      if (itemError) {
-        console.error('Order item insert error:', itemError)
-        alert(`Order items failed: ${itemError.message}`)
-        return
+      if (!item.id) {
+        throw new Error(`Missing product id for ${item.name || 'item'}`)
+      }
+      if (!Number.isFinite(price) || price <= 0) {
+        throw new Error(`Invalid price for ${item.name || 'item'}: ${item.price}`)
+      }
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        throw new Error(`Invalid quantity for ${item.name || 'item'}`)
       }
 
-      alert('Order placed successfully!')
+      return {
+        id: item.id,
+        name: item.name,
+        price,           // number, e.g. 4.5
+        quantity,        // integer
+      }
+    })
+
+    setIsSubmitting(true)
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            cart: cleanCart,
+            customerInfo: {
+              name: customerInfo.name.trim(),
+              email: customerInfo.email.trim(),
+              pickupTime: customerInfo.pickupTime,
+            },
+          }),
+        }
+      )
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Unable to start checkout.')
+      }
+
+      if (!data?.url) throw new Error('No checkout URL returned.')
+
       setCart([])
       setCustomerInfo({ name: '', email: '', pickupTime: '' })
       setShowCheckout(false)
-      return
+      window.location.assign(data.url)
+    } catch (err) {
+      console.error('Checkout error:', err)
+      alert(err.message || 'Unable to start checkout.')
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const orderItems = cart.map((item) => ({
-      order_id: order.id,
-      product_id: item.id,
-      quantity: item.quantity,
-      price: item.price,
-    }))
-
-    const { error: itemError } = await supabase.from('order_items').insert(orderItems)
-
-    if (itemError) {
-      console.error('Order item insert error:', itemError)
-      alert(`Order items failed: ${itemError.message}`)
-      return
-    }
-
-    alert('Order placed successfully!')
-    setCart([])
-    setCustomerInfo({ name: '', email: '', pickupTime: '' })
-    setShowCheckout(false)
   }
 
-  if (loading)
+    if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-3xl">
-        <div className="animate-spin h-12 w-12 border-4 border-amber-600 rounded-full border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-amber-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-amber-500 border-t-transparent" />
       </div>
     )
+  }
 
-  if (error)
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-red-600">
-        Error: {error}
+      <div className="min-h-screen flex items-center justify-center bg-amber-50">
+        <p className="text-red-600">Error: {error}</p>
       </div>
     )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-pink-50">
       <Header itemCount={itemCount} onCartOpen={() => setShowCart(true)} />
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <section className="rounded-[2rem] bg-white/80 p-10 shadow-lg shadow-slate-200 mb-10">
-          <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr] lg:items-center">
-            <div>
-              <h2 className="mt-4 text-5xl font-bold text-slate-900">
-                Cookies made from scratch, ready for pickup.
-              </h2>
-              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-600">
-                Browse our menu, add your favorites to the cart, and choose a pickup time. Every order is baked fresh and wrapped with care.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3 text-sm text-slate-700">
-                <span className="rounded-full bg-amber-100 px-4 py-2">Fast pickup - </span>
-                <span className="rounded-full bg-amber-100 px-4 py-2">Local ingredients - </span>
-                <span className="rounded-full bg-amber-100 px-4 py-2">Daily fresh batches</span>
-              </div>
-            </div>
-            <div className="rounded-3xl bg-amber-50 p-6 shadow-inner shadow-amber-100">
-              <div className="mt-6 space-y-4 text-slate-700">
-              </div>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <section className="mb-10 rounded-[2rem] bg-white/90 p-6 sm:p-10 shadow-lg">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900">
+            Cookies made from scratch, ready for pickup.
+          </h2>
+          <p className="mt-4 max-w-xl text-lg text-slate-600">
+            Browse our menu, add your favorites to the cart, and choose a pickup time.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2 text-sm">
+            <span className="rounded-full bg-amber-100 px-4 py-2">Fast pickup - </span>
+            <span className="rounded-full bg-amber-100 px-4 py-2">Local ingredients - </span>
+            <span className="rounded-full bg-amber-100 px-4 py-2">Daily fresh batches </span>
           </div>
         </section>
 
         <section>
-          <h2 className="mb-8 text-4xl font-bold text-slate-900">Our Delicious Cookies</h2>
-          <div className="grid gap-8">
+          <h2 className="mb-6 text-3xl font-bold text-slate-900">Our Delicious Cookies</h2>
+          <div className="grid gap-6">
             {products.map((product) => (
               <article
                 key={product.id}
-                className="flex flex-col overflow-hidden rounded-[2rem] bg-white shadow-xl transition hover:-translate-y-1 hover:shadow-2xl md:flex-row"
+                className="flex flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-md md:flex-row"
               >
                 <img
-                  src={product.image_url || '/public/photos/pbchoc.jfif'}
+                  src={product.image_url}
                   alt={product.name}
-                  className="h-72 w-full object-cover md:h-auto md:w-80"
+                  className="h-56 w-full object-cover md:h-auto md:w-72"
                 />
-                <div className="flex flex-1 flex-col justify-between gap-6 p-8">
+                <div className="flex flex-1 flex-col justify-between gap-4 p-6">
                   <div>
-                    <h3 className="mt-4 text-3xl font-bold text-slate-900">{product.name}</h3>
-                    <p className="mt-4 text-slate-600 leading-7">
-                      {product.desc}
-                    </p>
+                    <h3 className="text-2xl font-bold text-slate-900">{product.name}</h3>
+                    <p className="mt-2 text-slate-600">{product.desc}</p>
                   </div>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-3xl font-bold text-slate-900">${Number(product.price).toFixed(2)}</p>
-                      {product.stock === 0 ? (
-                        <p className="mt-2 text-sm text-red-600">Sold out</p>
-                      ) : (
-                        <p className="mt-2 text-sm text-slate-500">{product.stock} available</p>
-                      )}
+                      <p className="text-2xl font-bold">${Number(product.price).toFixed(2)}</p>
+                      <p className="text-sm text-slate-500">
+                        {product.stock === 0 ? 'Sold out' : `${product.stock} available`}
+                      </p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => addToCart(product)}
                       disabled={product.stock === 0}
-                      className="rounded-3xl bg-amber-600 px-8 py-4 text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      className="rounded-2xl bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700 disabled:bg-slate-300"
                     >
                       {product.stock === 0 ? 'Sold out' : 'Add to cart'}
                     </button>
@@ -237,6 +253,60 @@ function App() {
           </div>
         </section>
       </main>
+
+      {/*FLOATING CART BUTTON*/}
+      <button
+        type="button"
+        onClick={() => setShowCart(true)}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          backgroundColor: '#059669',
+          color: 'white',
+          padding: '14px 20px',
+          borderRadius: '16px',
+          border: 'none',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.25)',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        <span style={{ fontSize: '22px' }}>🛒</span>
+        <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
+          <div style={{ fontSize: '11px', opacity: 0.85, textTransform: 'uppercase' }}>
+            Your cart
+          </div>
+          <div style={{ fontWeight: 700, fontSize: '16px' }}>
+            {itemCount} item{itemCount !== 1 ? 's' : ''} · ${cartTotal.toFixed(2)}
+          </div>
+        </div>
+        {itemCount > 0 && (
+          <span
+            style={{
+              position: 'absolute',
+              top: '-8px',
+              right: '-8px',
+              backgroundColor: '#e11d48',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: 700,
+              minWidth: '22px',
+              height: '22px',
+              borderRadius: '999px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {itemCount}
+          </span>
+        )}
+      </button>
 
       {showCart && (
         <CartSidebar
@@ -256,6 +326,7 @@ function App() {
         cartTotal={cartTotal}
         setShowCheckout={setShowCheckout}
         submitOrder={submitOrder}
+        isSubmitting={isSubmitting}
       />
     </div>
   )
