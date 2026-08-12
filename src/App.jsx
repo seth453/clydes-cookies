@@ -130,7 +130,7 @@ function App() {
       return {
         id: item.id,
         name: item.name,
-        price,           // number, e.g. 4.5
+        price,           // float price
         quantity,        // integer
       }
     })
@@ -214,44 +214,54 @@ function App() {
         </section>
 
         <section>
-          <h2 className="mb-6 text-3xl font-bold text-slate-900">Our Delicious Cookies</h2>
-          <div className="grid gap-6">
-            {products.map((product) => (
-              <article
-                key={product.id}
-                className="flex flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-md md:flex-row"
-              >
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="h-56 w-full object-cover md:h-auto md:w-72"
-                />
-                <div className="flex flex-1 flex-col justify-between gap-4 p-6">
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{product.name}</h3>
-                    <p className="mt-2 text-slate-600">{product.desc}</p>
-                  </div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-2xl font-bold">${Number(product.price).toFixed(2)}</p>
-                      <p className="text-sm text-slate-500">
-                        {product.stock === 0 ? 'Sold out' : `${product.stock} available`}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock === 0}
-                      className="rounded-2xl bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700 disabled:bg-slate-300"
-                    >
-                      {product.stock === 0 ? 'Sold out' : 'Add to cart'}
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+  <h2 className="mb-6 text-3xl font-bold text-slate-900">
+    Our Delicious Cookies
+  </h2>
+
+  <div className="grid gap-6">
+    {products.map((product) => (
+      <article
+        key={product.id}
+        className="flex flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-md md:flex-row"
+      >
+        <img
+          src={product.image_url}
+          alt={product.name}
+          className="h-56 w-full object-cover md:h-auto md:w-72"
+        />
+
+        <div className="flex flex-1 flex-col justify-between gap-4 p-6">
+          <div>
+            <h3 className="text-2xl font-bold text-slate-900">
+              {product.name}
+            </h3>
+
+            <p className="mt-2 text-slate-600">
+              {product.desc}
+            </p>
           </div>
-        </section>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-2xl font-bold">
+                ${Number(product.price).toFixed(2)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => addToCart(product)}
+              className="rounded-2xl bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700"
+            >
+              Add to cart
+            </button>
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
+
       </main>
 
       {/*FLOATING CART BUTTON*/}

@@ -2,7 +2,7 @@ import Stripe from "npm:stripe@^22";
 import { withSupabase } from "npm:@supabase/server@^1";
 
 const stripe = new Stripe(
-  Deno.env.get("STRIPE_SECRET_KEY")!,
+  Deno.env.get("STRIPE_WEBHOOK_SECRET")!,
   {
     apiVersion: "2025-06-30.basil",
   }
