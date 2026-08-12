@@ -57,26 +57,43 @@ export default {
           });
         }
 
-        const session = await stripe.checkout.sessions.create({
-          mode: "payment",
-          payment_method_types: ["card"],
-          line_items,
+const session = await stripe.checkout.sessions.create({
+  mode: "payment",
+  payment_method_types: ["card"],
+  line_items,
 
-          metadata: {
-            customer_name: customerInfo?.name || "",
-            customer_email: customerInfo?.email || "",
-            pickup_time: customerInfo?.pickupTime || "",
-            cart: JSON.stringify(
-              cart.map((item) => ({
-                id: item.id,
-                quantity: item.quantity,
-              }))
-            ),
-          },
+  // So Stripe knows who to email
+  customer_email: customerInfo?.email || undefined,
 
-          success_url: "https://clydescookies.com",
-          cancel_url: "https://clydescookies.com",
-        });
+  metadata: {
+    customer_name: customerInfo?.name || "",
+    customer_email: customerInfo?.email || "",
+    pickup_time: customerInfo?.pickupTime || "",
+    cart: JSON.stringify(
+      cart.map((item) => ({
+        id: item.id,
+        quantity: item.quantity,
+      }))
+    ),
+  },
+
+  // Shows on the receipt / payment details
+  payment_intent_data: {
+    description: `Clyde's Cookies — Pickup: ${customerInfo?.pickupTime || "TBD"} — ${customerInfo?.name || ""}`,
+  },
+
+  // Optional: message on the Checkout page itself
+  custom_text: {
+    submit: {
+      message: customerInfo?.pickupTime
+        ? `Your pickup time: ${customerInfo.pickupTime}`
+        : undefined,
+    },
+  },
+
+  success_url: `https://clydescookies.com/?payment=success`,
+  cancel_url: `https://clydescookies.com/?payment=cancelled`,
+});
 
         return new Response(
           JSON.stringify({ url: session.url }),
