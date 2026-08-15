@@ -1,6 +1,8 @@
+My fiance started a local cookie business and I had the idea to make her a website for it.
+
 Clyde's Cookies is a full-stack web application that allows customers to browse products, build a shopping cart, schedule a pickup time, and securely pay online through Stripe.
 
-I designed, developed, deployed, and debugged the application end-to-end, including the frontend, database, payment integration, serverless backend, and production deployment.
+I bought the domain then designed, developed, deployed, and debugged the application end-to-end, including the frontend, database, payment integration, serverless backend, and production deployment.
 
 #Technology
 
