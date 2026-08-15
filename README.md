@@ -4,7 +4,7 @@ Clyde's Cookies is a full-stack web application that allows customers to browse 
 
 I bought the domain then designed, developed, deployed, and debugged the application end-to-end, including the frontend, database, payment integration, serverless backend, and production deployment.
 
-#Technology
+# Technology
 
 **Frontend**
 - React
