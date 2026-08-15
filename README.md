@@ -24,6 +24,7 @@ I bought the domain then designed, developed, deployed, and debugged the applica
 
 **Payments**
 ![Project Screenshot](stripeex.PNG)
+(my own $.50 test transaction above haha)
 - Stripe Checkout
 - Stripe Webhooks
 - Stripe test and live environments
