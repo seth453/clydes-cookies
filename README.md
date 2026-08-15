@@ -1,16 +1,48 @@
-# React + Vite
+Clyde's Cookies is a full-stack web application that allows customers to browse products, build a shopping cart, schedule a pickup time, and securely pay online through Stripe.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+I designed, developed, deployed, and debugged the application end-to-end, including the frontend, database, payment integration, serverless backend, and production deployment.
 
-Currently, two official plugins are available:
+#Technology
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+**Frontend**
+- React
+- Vite
+- JavaScript
+- Tailwind CSS
 
-## React Compiler
+**Backend & Database**
+- Supabase
+- PostgreSQL
+- Supabase Edge Functions
+- REST APIs
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Payments**
+- Stripe Checkout
+- Stripe Webhooks
+- Stripe test and live environments
 
-## Expanding the ESLint configuration
+**Deployment**
+- Vercel
+- Supabase
+- Custom domain / DNS
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+
+
+#Database design
+The application uses relational tables for:
+
+Products
+Orders
+Order items
+
+Orders and order items are connected using foreign-key relationships. I have real orders that have been processed. 
+
+
+
+
+#What I learned: 
+
+This project gave me hands-on experience building and deploying a complete application rather than working only on isolated frontend or programming assignments.
+
+It required connecting frontend code, backend services, databases, third-party APIs, payment processing, webhooks, and production infrastructure into one system.
