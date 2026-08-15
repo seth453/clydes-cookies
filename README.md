@@ -1,4 +1,5 @@
 My fiance started a local cookie business and I had the idea to make her a website for it.
+![Project Screenshot](aboutus2.jpeg.PNG)
 
 Clyde's Cookies is a full-stack web application that allows customers to browse products, build a shopping cart, schedule a pickup time, and securely pay online through Stripe.
 
@@ -19,6 +20,7 @@ I bought the domain then designed, developed, deployed, and debugged the applica
 - REST APIs
 
 **Payments**
+![Project Screenshot](stripeex.PNG)
 - Stripe Checkout
 - Stripe Webhooks
 - Stripe test and live environments
