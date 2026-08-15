@@ -31,7 +31,7 @@ I bought the domain then designed, developed, deployed, and debugged the applica
 
 
 
-#Database design
+# Database design
 The application uses relational tables for:
 
 Products
@@ -43,7 +43,7 @@ Orders and order items are connected using foreign-key relationships. I have rea
 
 
 
-#What I learned: 
+# What I learned: 
 
 This project gave me hands-on experience building and deploying a complete application rather than working only on isolated frontend or programming assignments.
 
