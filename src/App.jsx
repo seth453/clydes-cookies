@@ -2,7 +2,6 @@
 import { supabase } from './supabaseClient'
 import Header from './Header'
 import CartSidebar from './cart'
-import CheckoutModal from './CheckoutModal'
 
 function App() {
   const [products, setProducts] = useState([])
@@ -10,7 +9,6 @@ function App() {
   const [error, setError] = useState(null)
   const [cart, setCart] = useState([])
   const [showCart, setShowCart] = useState(false)
-  const [showCheckout, setShowCheckout] = useState(false)
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     email: '',
@@ -66,6 +64,9 @@ function App() {
     (sum, item) => sum + Number(item.price) * item.quantity,
     0
   )
+  const minPickupTime = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16)
 
   const addToCart = (product) => {
     setCart((prev) => {
@@ -94,8 +95,7 @@ function App() {
 
   const handleCheckout = () => {
     if (cart.length === 0) return
-    setShowCart(false)
-    setShowCheckout(true)
+    setShowCart(true)
   }
 
   const submitOrder = async () => {
@@ -109,6 +109,12 @@ function App() {
     }
     if (cart.length === 0) {
       alert('Your cart is empty.')
+      return
+    }
+
+    const pickupDate = new Date(customerInfo.pickupTime)
+    if (Number.isNaN(pickupDate.getTime()) || pickupDate <= new Date()) {
+      alert('Please choose a pickup time in the future.')
       return
     }
 
@@ -130,7 +136,7 @@ function App() {
       return {
         id: item.id,
         name: item.name,
-        price,           // float price
+        price,           // float
         quantity,        // integer
       }
     })
@@ -168,7 +174,7 @@ function App() {
 
       setCart([])
       setCustomerInfo({ name: '', email: '', pickupTime: '' })
-      setShowCheckout(false)
+      setShowCart(false)
       window.location.assign(data.url)
     } catch (err) {
       console.error('Checkout error:', err)
@@ -195,73 +201,56 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-pink-50">
+    <div className="min-h-screen bg-[#f5efe7] text-[#2d1f1a]">
       <Header itemCount={itemCount} onCartOpen={() => setShowCart(true)} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <section className="mb-10 rounded-[2rem] bg-white/90 p-6 sm:p-10 shadow-lg">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900">
-            Cookies made from scratch, ready for pickup.
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <section className="mb-10 rounded-[2rem] border border-[#d7c2aa] bg-[#fffaf5]/90 p-6 shadow-[0_18px_45px_rgba(72,42,28,0.08)] sm:p-10">
+          <h2 className="text-3xl font-bold text-[#2d1f1a] sm:text-4xl lg:text-5xl">
+            Fresh cookies made in Dallas, OR.
           </h2>
-          <p className="mt-4 max-w-xl text-lg text-slate-600">
-            Browse our menu, add your favorites to the cart, and choose a pickup time.
+          <p className="mt-4 max-w-xl text-lg text-[#5a4338]">
+            Small-batch cookies baked fresh for pickup in Dallas & Salem.
           </p>
           <div className="mt-6 flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-amber-100 px-4 py-2">Fast pickup - </span>
-            <span className="rounded-full bg-amber-100 px-4 py-2">Local ingredients - </span>
-            <span className="rounded-full bg-amber-100 px-4 py-2">Daily fresh batches </span>
           </div>
         </section>
 
         <section>
-  <h2 className="mb-6 text-3xl font-bold text-slate-900">
-    Our Delicious Cookies
-  </h2>
-
-  <div className="grid gap-6">
-    {products.map((product) => (
-      <article
-        key={product.id}
-        className="flex flex-col overflow-hidden rounded-[1.75rem] bg-white shadow-md md:flex-row"
-      >
-        <img
-          src={product.image_url}
-          alt={product.name}
-          className="h-56 w-full object-cover md:h-auto md:w-72"
-        />
-
-        <div className="flex flex-1 flex-col justify-between gap-4 p-6">
-          <div>
-            <h3 className="text-2xl font-bold text-slate-900">
-              {product.name}
-            </h3>
-
-            <p className="mt-2 text-slate-600">
-              {product.desc}
-            </p>
+          <h2 className="mb-6 text-3xl font-bold text-[#2d1f1a]">Our Delicious Cookies</h2>
+          <div className="grid gap-6">
+            {products.map((product) => (
+              <article
+                key={product.id}
+                className="flex flex-col overflow-hidden rounded-[1.75rem] border border-[#e3d1b5] bg-[#fffaf5] shadow-[0_14px_30px_rgba(74,45,30,0.08)] md:flex-row"
+              >
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="h-56 w-full object-cover md:h-auto md:w-72"
+                />
+                <div className="flex flex-1 flex-col justify-between gap-4 p-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#2d1f1a]">{product.name}</h3>
+                    <p className="mt-2 text-[#5a4338]">{product.desc}</p>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-[#2d1f1a]">${Number(product.price).toFixed(2)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(product)}
+                      className="rounded-2xl bg-[#5c3527] px-6 py-3 font-semibold text-[#fffaf5] transition hover:bg-[#472d22] disabled:bg-[#c9b7a3]"
+                    >
+                      Add to cart
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
           </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-2xl font-bold">
-                ${Number(product.price).toFixed(2)}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => addToCart(product)}
-              className="rounded-2xl bg-amber-600 px-6 py-3 font-semibold text-white hover:bg-amber-700"
-            >
-              Add to cart
-            </button>
-          </div>
-        </div>
-      </article>
-    ))}
-  </div>
-</section>
-
+        </section>
       </main>
 
       {/*FLOATING CART BUTTON*/}
@@ -276,12 +265,12 @@ function App() {
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          backgroundColor: '#059669',
-          color: 'white',
+          backgroundColor: '#5c3527',
+          color: '#fffaf5',
           padding: '14px 20px',
           borderRadius: '16px',
           border: 'none',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.25)',
+          boxShadow: '0 10px 25px rgba(58,38,29,0.22)',
           cursor: 'pointer',
           fontFamily: 'inherit',
         }}
@@ -326,18 +315,13 @@ function App() {
           cartTotal={cartTotal}
           setShowCart={setShowCart}
           handleCheckout={handleCheckout}
+          customerInfo={customerInfo}
+          setCustomerInfo={setCustomerInfo}
+          submitOrder={submitOrder}
+          isSubmitting={isSubmitting}
+          minPickupTime={minPickupTime}
         />
       )}
-
-      <CheckoutModal
-        showCheckout={showCheckout}
-        customerInfo={customerInfo}
-        setCustomerInfo={setCustomerInfo}
-        cartTotal={cartTotal}
-        setShowCheckout={setShowCheckout}
-        submitOrder={submitOrder}
-        isSubmitting={isSubmitting}
-      />
     </div>
   )
 }

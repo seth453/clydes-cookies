@@ -5,6 +5,10 @@
   cartTotal,
   setShowCart,
   handleCheckout,
+  customerInfo,
+  setCustomerInfo,
+  submitOrder,
+  isSubmitting,
 }) {
   return (
     <div
@@ -33,8 +37,8 @@
           width: '100%',
           maxWidth: '400px',
           height: '100%',
-          backgroundColor: 'white',
-          boxShadow: '-8px 0 30px rgba(0,0,0,0.15)',
+          backgroundColor: '#fffaf5',
+          boxShadow: '-8px 0 30px rgba(58,38,29,0.15)',
           display: 'flex',
           flexDirection: 'column',
           animation: 'slideInRight 0.3s ease-out',
@@ -43,14 +47,14 @@
         {/* Header */}
         <div
           style={{
-            backgroundColor: '#ecfdf5',
+            backgroundColor: '#cbac83',
             padding: '20px 24px',
-            borderBottom: '1px solid #d1fae5',
+            borderBottom: '1px solid #d8c0a0',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ fontSize: '22px', fontWeight: 700, margin: '4px 0 0', color: '#0f172a' }}>
+              <h3 style={{ fontSize: '22px', fontWeight: 700, margin: '4px 0 0', color: '#2a1d18' }}>
                 Your Cart
               </h3>
             </div>
@@ -114,7 +118,7 @@
                     padding: '12px',
                     borderRadius: '16px',
                     border: '1px solid #f1f5f9',
-                    background: '#f8fafc',
+                    background: '#ead7c2',
                   }}
                 >
                   <img
@@ -215,27 +219,75 @@
 
         {/* Footer */}
         {cart.length > 0 && (
-          <div style={{ borderTop: '1px solid #f1f5f9', padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>
-              <span>Total</span>
-              <span style={{ color: '#047857' }}>${Number(cartTotal).toFixed(2)}</span>
+          <div style={{ borderTop: '1px solid #f1f9f4', padding: '20px' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 700, marginBottom: '12px' }}>
+                <span>Total</span>
+                <span style={{ color: '#047857' }}>${Number(cartTotal).toFixed(2)}</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label htmlFor="cart-customer-name" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3b2d28', marginBottom: '6px' }}>
+                    Full name
+                  </label>
+                  <input
+                    id="cart-customer-name"
+                    type="text"
+                    placeholder="Betty Crocker"
+                    value={customerInfo.name}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e8d7c1', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', background: '#fff', color: '#1f2937' }}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="cart-customer-email" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3b2d28', marginBottom: '6px' }}>
+                    Email
+                  </label>
+                  <input
+                    id="cart-customer-email"
+                    type="email"
+                    placeholder="famous@amos.com"
+                    value={customerInfo.email}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, email: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e8d7c1', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', background: '#fff', color: '#1f2937' }}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="cart-pickup-time" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#3b2d28', marginBottom: '6px' }}>
+                    Pickup time
+                  </label>
+                  <input
+                    id="cart-pickup-time"
+                    type="datetime-local"
+                    value={customerInfo.pickupTime}
+                    onChange={(e) => setCustomerInfo({ ...customerInfo, pickupTime: e.target.value })}
+                    style={{ width: '100%', boxSizing: 'border-box', border: '1px solid #e8d7c1', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', background: '#fff', color: '#1f2937' }}
+                  />
+                </div>
+              </div>
             </div>
+
             <button
               type="button"
-              onClick={handleCheckout}
+              onClick={submitOrder}
+              disabled={isSubmitting}
               style={{
                 width: '100%',
-                background: '#059669',
-                color: 'white',
+                background: '#cbac83',
+                color: '#090501',
                 border: 'none',
                 padding: '14px',
                 borderRadius: '14px',
                 fontWeight: 600,
                 fontSize: '16px',
-                cursor: 'pointer',
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                opacity: isSubmitting ? 0.7 : 1,
               }}
             >
-              Proceed to checkout
+              {isSubmitting ? 'Redirecting...' : 'Proceed to payment'}
             </button>
             <button
               type="button"
